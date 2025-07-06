@@ -22,7 +22,7 @@ onMounted(() => {
   <div class="box" v-if="active"><span class="text">{{ id }}</span></div> -->
   <div class="app-container">
     <VerovioViewer v-if="active" />
-    <VerovioViewer v-if="active" />
+    <!-- <VerovioViewer v-if="active" /> -->
   </div>
 </template>
 
