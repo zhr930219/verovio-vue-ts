@@ -12,16 +12,18 @@ import svgpanzoom from 'svg-pan-zoom'
 import customEventsHandler from '@/components/CustomEventsHandler'
 import type { VerovioOptions } from 'verovio'
 import { toolkit } from 'verovio'
-type MessageArgs = {
-  [K in keyof toolkit]: {
-    func: K
-    data: Parameters<toolkit[K]>
+type MessageArgs<T extends keyof toolkit> = {
+    func: T
+    data: Parameters<toolkit[T]>
     key?: string
-  }
-}[keyof toolkit]
+}
 type FuncTypes = {
   [K in keyof toolkit]: K
 }
+type PostMessage = <K extends keyof toolkit>(
+  msg: MessageArgs<K>
+) => Promise<Awaited<ReturnType<toolkit[K]>>>
+
 const store = useSegmentedID()
 const { update } = store
 const { id } = storeToRefs(store)
@@ -45,7 +47,7 @@ const ready = async (data: string[]) => {
     footer: 'none',
     scale: 5
   }
-  const response = await postMessage<FuncTypes['setOptions']>({ func: 'setOptions', data: [options] })
+  const response = await postMessage({ func: 'setOptions', data: [options] })
   console.log(response)
 }
 verovioWorker.value.addListener('ready', ready)
@@ -54,7 +56,7 @@ const loadData = (total: number) => {
   const promises = []
   loading.value = true
   for (const num of Array.from({ length: total }, (_, i) => i + 1)) {
-    promises.push(postMessage<FuncTypes['renderToSVG']>({
+    promises.push(postMessage({
       func: 'renderToSVG',
       data: [num, true]
     }).then((response) => {
@@ -92,11 +94,11 @@ const renderPage = (data: any) => {
 }
 const loadMusicXML = async (xml: string) => {
   loading.value = true
-  const status = await postMessage<FuncTypes['loadData']>({
+  const status = await postMessage({
     func: 'loadData',
     data: [ xml ]
   })
-  const response = await postMessage<FuncTypes['getPageCount']>({
+  const response = await postMessage({
     func: 'getPageCount',
     data: []
   })
@@ -135,7 +137,7 @@ const handleFileChange = (e: Event) => {
 const handlePageChange = async (current: number) => {
   page.value = current
   loading.value = true
-  const response = await postMessage<FuncTypes['renderToSVG']>({
+  const response = await postMessage({
     func: 'renderToSVG',
     data: [current, true]
   })
@@ -155,7 +157,7 @@ const handlePageChange = async (current: number) => {
 }
 
 const getOptions = async () => {
-  const response = await postMessage<FuncTypes['getOptions']>({
+  const response = await postMessage({
     func: 'getOptions',
     data: []
   })
@@ -163,14 +165,14 @@ const getOptions = async () => {
 }
 
 const getDefaultOptions = async () => {
-  const response = await postMessage<FuncTypes['getDefaultOptions']>({
+  const response = await postMessage({
     func: 'getDefaultOptions',
     data: []
   })
   console.log(response)
 }
 
-const postMessage = async<T extends keyof toolkit> (data: MessageArgs): Promise<ReturnType<toolkit[T]>> => {
+const postMessage: PostMessage = async<T extends keyof toolkit> (data: MessageArgs<T>): Promise<Awaited<ReturnType<toolkit[T]>>> => {
   return verovioWorker.value.postMessage(data)
 }
 

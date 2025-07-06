@@ -15,19 +15,17 @@ export class Deferred {
     })
   }
 }
-type MessageArgs = {
-  [K in keyof toolkit]: {
-    func: K
-    data: Parameters<toolkit[K]>
+type MessageArgs<T extends keyof toolkit> = {
+    func: T
+    data: Parameters<toolkit[T]>
     key?: string,
     deferred?: Deferred,
     callback?: (data: any) => void
-  }
-}[keyof toolkit]
+}
 
 export class VerovioWorker {
   worker: Worker = new Worker(new URL('@/components/verovioWorker.ts', import.meta.url), { type: 'module' })
-  msgList: MessageArgs[] = []
+  msgList: MessageArgs<keyof toolkit>[] = []
   listeners = new Map<string, Function[]>()
 
   constructor() {
@@ -76,14 +74,14 @@ export class VerovioWorker {
       }
     }
   }
-  postMessage<T extends keyof toolkit>(data: MessageArgs) {
+  postMessage<T extends keyof toolkit>(data: MessageArgs<T>): Promise<Awaited<ReturnType<toolkit[T]>>> {
     const deferred = new Deferred(data.func)
     if (!data.key) {
       data.key = generateSegmentedID(3, 6)
     }
     this.worker.postMessage(omit(data, ['deferred']))
     this.msgList.push(Object.assign(data, { deferred }))
-    return deferred.promise as Promise<ReturnType<toolkit[T]>>
+    return deferred.promise
   }
   destroy() {
     this.worker.terminate()
