@@ -91,11 +91,11 @@ self.onmessage = async (event: { data: EventDataArgs }) => {
   // console.log(data, type)
   if (isType(verovioToolkit[func], 'Function')) {
     // @ts-ignore
-    const result = verovioToolkit[func](...data)
+    const result: ReturnType<typeof verovioToolkit[typeof func]> = verovioToolkit[func](...data)
     postMessage({ func, data: result, key })
   } else if (isType(verovioToolkit[func], 'Promise')) {
     // @ts-ignore
-    const result = await verovioToolkit[func](...data)
+    const result: Awaited<ReturnType<typeof verovioToolkit[typeof func]>> = await verovioToolkit[func](...data)
     postMessage({ func, data: result, key })
   }
 }
