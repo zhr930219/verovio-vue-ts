@@ -5,7 +5,6 @@ export const useSvgPanZoom = (
   containerId: SVGElement['id'],
   options: SvgPanZoom.Options = {}
 ) => {
-  const svgPanZoomInstance = shallowRef<SvgPanZoom.Instance | null>(null)
-  svgPanZoomInstance.value = svgPanZoom('#' + containerId, options)
-  return svgPanZoomInstance.value
+  const svgPanZoomInstance = svgPanZoom('#' + containerId, options)
+  return svgPanZoomInstance
 }

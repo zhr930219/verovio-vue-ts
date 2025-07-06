@@ -27,6 +27,7 @@ type PostMessage = <K extends keyof toolkit>(
 const store = useSegmentedID()
 const { update } = store
 const { id } = storeToRefs(store)
+const random = ref(generateSegmentedID(3, 6))
 const idleTaskQueue = new IdleTaskQueue()
 const verovioWorker = shallowRef(useVerovioWorker())
 const page = ref(1)
@@ -72,7 +73,7 @@ const loadData = (total: number) => {
     loading.value = false
     if (svgRef.value) {
       nextTick(() => {
-        spz.value = useSvgPanZoom('verovio-container', {
+        spz.value = useSvgPanZoom('verovio-container' + '-' + random.value, {
           zoomEnabled: true,
           fit: true,
           center: true,
@@ -129,7 +130,7 @@ const handleFileChange = (e: Event) => {
     // console.log('MusicXML content as string:')
     // console.log(musicXmlString)
     renderResultList.value = []
-    document.getElementById('verovio-container')!.innerHTML = ''
+    document.getElementById('verovio-container' + '-' + random.value)!.innerHTML = ''
     loadMusicXML(musicXmlString as string)
   }
   reader.readAsText(file)
@@ -146,7 +147,7 @@ const handlePageChange = async (current: number) => {
   loading.value = false
   if (svgRef.value) {
     nextTick(() => {
-      spz.value = useSvgPanZoom('verovio-container', {
+      spz.value = useSvgPanZoom('verovio-container' + '-' + random.value, {
         zoomEnabled: true,
         fit: true,
         center: true,
@@ -204,17 +205,17 @@ onBeforeUnmount(() => {
     <button class="btn" @click="update()">updateSegmentedID</button>
     <button class="btn" @click="getOptions()">getOptions</button>
     <button class="btn" @click="getDefaultOptions()">getDefaultOptions</button>
-    <input ref="fileInputRef" style="display: none;" @change="handleFileChange" :multiple="false" type="file" id="fileInput" />
-    <label for="fileInput">
+    <input ref="fileInputRef" style="display: none;" @change="handleFileChange" :multiple="false" type="file" :id="'fileInput' + '-' + random" />
+    <label :for="'fileInput' + '-' + random">
       <button class="btn" @click="fileInputRef?.click()">choose musicXML</button>
     </label>
     <div class="verovio-container" v-if="!loading">
-      <svg v-html="svgRef" class="verovio-container-svg" id="verovio-container"></svg>
+      <svg v-html="svgRef" class="verovio-container-svg" :id="'verovio-container' + '-' + random"></svg>
     </div>
     <div class="verovio-container" v-else>
       <LoadingSpinner class="verovio-container-svg"></LoadingSpinner>
     </div>
-    <div class="verovio-list-container" id="verovio-list-container">
+    <div class="verovio-list-container" :id="'verovio-list-container' + '-' + random">
       <div
         @click="handlePageChange(index + 1)"
         v-for="(item, index) in renderResultList"

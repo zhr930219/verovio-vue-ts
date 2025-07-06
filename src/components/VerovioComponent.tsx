@@ -4,7 +4,7 @@ import { createUseStyles } from 'vue-jss-vite'
 import { ref, onMounted, shallowRef, onBeforeUnmount, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import IdleTaskQueue from './task'
-import { generateSegmentedID } from '@/utils/utils'
+import { generateSegmentedID, omit } from '@/utils/utils'
 import { usePerformanceChecker } from './usePerformanceChecker'
 import { useVerovioWorker } from './useVerovioWorker'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -25,170 +25,6 @@ type MessageArgs<T extends keyof toolkit> = {
 type PostMessage = <K extends keyof toolkit>(
   msg: MessageArgs<K>
 ) => Promise<Awaited<ReturnType<toolkit[K]>>>
-
-const idleTaskQueue = new IdleTaskQueue()
-const verovioWorker = shallowRef(useVerovioWorker())
-const page = ref(1)
-const total = ref(0)
-const fileInputRef = ref<HTMLInputElement | null>(null)
-const fileList = ref<File[] | null[]>([])
-const renderResultList = ref<string[]>([])
-const svgRef = ref<string>('')
-const spz = shallowRef<typeof svgpanzoom | null>(null)
-const loading = ref(false)
-
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const { draw, stop } = usePerformanceChecker({ canvasRef })
-
-const ready = async (data: string[]) => {
-  const options: VerovioOptions = {
-    footer: 'none',
-    scale: 5
-  }
-  const response = await postMessage({ func: 'setOptions', data: [options] })
-  console.log(response)
-}
-verovioWorker.value.addListener('ready', ready)
-
-const loadData = (total: number) => {
-  const promises = []
-  loading.value = true
-  for (const num of Array.from({ length: total }, (_, i) => i + 1)) {
-    promises.push(postMessage({
-      func: 'renderToSVG',
-      data: [num, true]
-    }).then((response) => {
-      // console.log(response)
-      if (num === 1) {
-        svgRef.value = ref(response).value
-      }
-      renderPage(response)
-    }))
-  }
-  Promise.all(promises).then(() => {
-    console.log('all done')
-    loading.value = false
-    if (svgRef.value) {
-      nextTick(() => {
-        spz.value = useSvgPanZoom('verovio-container', {
-          zoomEnabled: true,
-          fit: true,
-          center: true,
-          customEventsHandler: customEventsHandler
-        })
-      })
-    }
-  })
-}
-
-const renderPage = (data: any) => {
-  // console.log(data.page)
-  idleTaskQueue.addTask(() => {
-    // setTimeout(() => {
-    //   document.getElementById('verovio-list-container')?.insertAdjacentHTML('beforeend', data.svg)
-    // }, page * 500)
-    renderResultList.value.push(data)
-  })
-}
-const loadMusicXML = async (xml: string) => {
-  loading.value = true
-  const status = await postMessage({
-    func: 'loadData',
-    data: [ xml ]
-  })
-  const response = await postMessage({
-    func: 'getPageCount',
-    data: []
-  })
-  loading.value = false
-  // console.log(status)
-  // console.log(response)
-  total.value = response
-  loadData(response)
-}
-const handleFileChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  const files = target.files
-  if (!files || !files.length) {
-    fileList.value = []
-    return
-  }
-  fileList.value = [ files[0] ]
-  const file = files[0]
-  console.log(file)
-  if (!file) {
-    console.warn('No file selected.')
-    return
-  }
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const musicXmlString = e.target ? e.target.result : ''
-    // console.log('MusicXML content as string:')
-    // console.log(musicXmlString)
-    renderResultList.value = []
-    document.getElementById('verovio-container')!.innerHTML = ''
-    loadMusicXML(musicXmlString as string)
-  }
-  reader.readAsText(file)
-}
-const handlePageChange = async (current: number) => {
-  page.value = current
-  loading.value = true
-  const response = await postMessage({
-    func: 'renderToSVG',
-    data: [current, true]
-  })
-  // console.log(response)
-  svgRef.value = ref(response).value
-  loading.value = false
-  if (svgRef.value) {
-    nextTick(() => {
-      spz.value = useSvgPanZoom('verovio-container', {
-        zoomEnabled: true,
-        fit: true,
-        center: true,
-        customEventsHandler: customEventsHandler
-      })
-    })
-  }
-}
-
-const getOptions = async () => {
-  const response = await postMessage({
-    func: 'getOptions',
-    data: []
-  })
-  console.log(response)
-}
-
-const getDefaultOptions = async () => {
-  const response = await postMessage({
-    func: 'getDefaultOptions',
-    data: []
-  })
-  console.log(response)
-}
-
-const getMEI = async () => {
-  const response = await postMessage({
-    func: 'getMEI',
-    data: []
-  })
-  console.log(response)
-}
-
-const postMessage: PostMessage = async<T extends keyof toolkit> (data: MessageArgs<T>): Promise<Awaited<ReturnType<toolkit[T]>>> => {
-  return verovioWorker.value.postMessage(data)
-}
-
-const handleResize = () => {
-  if (spz.value) {
-    spz.value.resize()
-    spz.value.fit()
-    spz.value.center()
-  }
-}
 
 const useStyle = createUseStyles({
   verovio: {
@@ -244,24 +80,197 @@ const useStyle = createUseStyles({
 
 const VerovioComponent = defineComponent({
   setup (props) {
+    const random = ref(generateSegmentedID(3, 6))
     const classes = useStyle()
     const store = useSegmentedID()
     const { update } = store
     const { id } = storeToRefs(store)
+    const idleTaskQueue = new IdleTaskQueue()
+    const verovioWorker = shallowRef(useVerovioWorker())
+    const page = ref(1)
+    const total = ref(0)
+    const fileInputRef = ref<HTMLInputElement | null>(null)
+    const fileList = ref<File[] | null[]>([])
+    const renderResultList = ref<string[]>([])
+    const svgRef = ref<string>('')
+    const spz = shallowRef<typeof svgpanzoom | null>(null)
+    const loading = ref(false)
+
+    const canvasRef = ref<HTMLCanvasElement | null>(null)
+    const { draw, stop } = usePerformanceChecker({ canvasRef })
+
+    const ready = async (data: string[]) => {
+      const options: VerovioOptions = {
+        footer: 'none',
+        scale: 5
+      }
+      const response = await postMessage({ func: 'setOptions', data: [options] })
+      console.log(response)
+    }
+    verovioWorker.value.addListener('ready', ready)
+
+    const loadData = (total: number) => {
+      const promises = []
+      loading.value = true
+      for (const num of Array.from({ length: total }, (_, i) => i + 1)) {
+        promises.push(postMessage({
+          func: 'renderToSVG',
+          data: [num, true]
+        }).then((response) => {
+          // console.log(response)
+          if (num === 1) {
+            svgRef.value = ref(response).value
+          }
+          renderPage(response)
+        }))
+      }
+      Promise.all(promises).then(() => {
+        console.log('all done')
+        loading.value = false
+        if (svgRef.value) {
+          nextTick(() => {
+            spz.value = useSvgPanZoom('verovio-container' + '-' + random.value, {
+              zoomEnabled: true,
+              fit: true,
+              center: true,
+              customEventsHandler: customEventsHandler
+            })
+          })
+        }
+      })
+    }
+
+    const renderPage = (data: any) => {
+      // console.log(data.page)
+      idleTaskQueue.addTask(() => {
+        // setTimeout(() => {
+        //   document.getElementById('verovio-list-container')?.insertAdjacentHTML('beforeend', data.svg)
+        // }, page * 500)
+        renderResultList.value.push(data)
+      })
+    }
+    const loadMusicXML = async (xml: string) => {
+      loading.value = true
+      const status = await postMessage({
+        func: 'loadData',
+        data: [ xml ]
+      })
+      const response = await postMessage({
+        func: 'getPageCount',
+        data: []
+      })
+      loading.value = false
+      // console.log(status)
+      // console.log(response)
+      total.value = response
+      loadData(response)
+    }
+    const handleFileChange = (e: Event) => {
+      const target = e.target as HTMLInputElement
+      const files = target.files
+      if (!files || !files.length) {
+        fileList.value = []
+        return
+      }
+      fileList.value = [ files[0] ]
+      const file = files[0]
+      console.log(file)
+      if (!file) {
+        console.warn('No file selected.')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const musicXmlString = e.target ? e.target.result : ''
+        // console.log('MusicXML content as string:')
+        // console.log(musicXmlString)
+        renderResultList.value = []
+        document.getElementById('verovio-container' + '-' + random.value)!.innerHTML = ''
+        loadMusicXML(musicXmlString as string)
+      }
+      reader.readAsText(file)
+    }
+    const handlePageChange = async (current: number) => {
+      page.value = current
+      loading.value = true
+      const response = await postMessage({
+        func: 'renderToSVG',
+        data: [current, true]
+      })
+      // console.log(response)
+      svgRef.value = ref(response).value
+      loading.value = false
+      if (svgRef.value) {
+        nextTick(() => {
+          spz.value = useSvgPanZoom('verovio-container' + '-' + random.value, {
+            zoomEnabled: true,
+            fit: true,
+            center: true,
+            customEventsHandler: customEventsHandler
+          })
+        })
+      }
+    }
+
+    const getOptions = async () => {
+      const response = await postMessage({
+        func: 'getOptions',
+        data: []
+      })
+      console.log(response)
+    }
+
+    const getDefaultOptions = async () => {
+      const response = await postMessage({
+        func: 'getDefaultOptions',
+        data: []
+      })
+      console.log(response)
+    }
+
+    const getMEI = async () => {
+      const response = await postMessage({
+        func: 'getMEI',
+        data: []
+      })
+      console.log(response)
+    }
+
+    const postMessage: PostMessage = async<T extends keyof toolkit> (data: MessageArgs<T>): Promise<Awaited<ReturnType<toolkit[T]>>> => {
+      return verovioWorker.value.postMessage(data)
+    }
+
+    const handleResize = () => {
+      if (spz.value) {
+        spz.value.resize()
+        spz.value.fit()
+        spz.value.center()
+      }
+    }
+    onMounted(() => {
+      draw()
+      window.addEventListener('resize', handleResize)
+    })
+    onBeforeUnmount(() => {
+      verovioWorker.value.removeListener('ready', ready)
+      window.removeEventListener('resize', handleResize)
+      verovioWorker.value.destroy()
+    })
     return () => {
       return (
         <div class={ classes.value.verovio }>
           <div class={ classes.value.performance }>
-            <canvas width={ '60' } height={ '60' } ref={ canvasRef } id={ 'canvas' }></canvas>
+            <canvas width={ '60' } height={ '60' } ref={ canvasRef }></canvas>
           </div>
           <span class={ classes.value.text }>{ id.value }</span>
           <button class={ classes.value.btn } onClick={ update.bind(this, 3, 6) }>updateSegmentedID</button>
           <button class={ classes.value.btn } onClick={ getOptions }>getOptions</button>
           <button class={ classes.value.btn } onClick={ getDefaultOptions }>getDefaultOptions</button>
           <button class={ classes.value.btn } onClick={ getMEI }>getMEI</button>
-          <input ref={ fileInputRef } style={{ display: 'none' }} onChange={ handleFileChange } multiple={false} type={ 'file' } id={ 'fileInput' } />
-          <label for={ 'fileInput' }>
-            <button class={ classes.value.btn } onClick={ fileInputRef.value?.click.bind(document.getElementById('fileInput')) }>choose musicXML</button>
+          <input ref={ fileInputRef } style={{ display: 'none' }} onChange={ handleFileChange } multiple={false} type={ 'file' } id={ 'fileInput' + '-' + random.value } />
+          <label for={ 'fileInput' + '-' + random.value }>
+            <button class={ classes.value.btn } onClick={ fileInputRef.value?.click.bind(document.getElementById('fileInput' + '-' + random.value)) }>choose musicXML</button>
           </label>
           {
             loading.value ?
@@ -269,10 +278,10 @@ const VerovioComponent = defineComponent({
               <LoadingSpinner class={ classes.value.verovioContainerSvg }></LoadingSpinner>
             </div> :
             <div class={ classes.value.verovioContainer }>
-              <svg innerHTML={ svgRef.value } class={ classes.value.verovioContainerSvg } id={ 'verovio-container' }></svg>
+              <svg innerHTML={ svgRef.value } class={ classes.value.verovioContainerSvg } id={ 'verovio-container' + '-' + random.value }></svg>
             </div>
           }
-           <div class={ classes.value.verovioListContainer } id={ 'verovio-list-container' }>
+           <div class={ classes.value.verovioListContainer } id={ 'verovio-list-container' + '-' + random.value }>
             {
               renderResultList.value.map((item, index) => {
                 return (
@@ -293,15 +302,6 @@ const VerovioComponent = defineComponent({
   },
   components: {
     LoadingSpinner
-  },
-  mounted() {
-    draw()
-    window.addEventListener('resize', handleResize)
-  },
-  beforeUnmount () {
-    verovioWorker.value.removeListener('ready', ready)
-    window.removeEventListener('resize', handleResize)
-    verovioWorker.value.destroy()
   }
 })
 
