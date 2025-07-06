@@ -17,7 +17,6 @@ export default class IdleTaskQueue {
     }
   }
 
-  // 执行任务
   runTasks(deadline: IdleDeadline) {
     while (this.tasks.length > 0 && deadline.timeRemaining() > 0) {
       const task = this.tasks.shift()
