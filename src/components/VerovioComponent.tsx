@@ -13,7 +13,10 @@ import { useSvgPanZoom } from './useSvgPanZoom'
 import svgpanzoom from 'svg-pan-zoom'
 import customEventsHandler from '@/components/CustomEventsHandler'
 import type { VerovioOptions } from 'verovio'
-import type { toolkit } from 'verovio'
+import { toolkit } from 'verovio'
+type FuncTypes = {
+  [K in keyof toolkit]: K
+}
 type MessageArgs = {
   [K in keyof toolkit]: {
     func: K
@@ -41,7 +44,7 @@ const ready = async (data: string[]) => {
     footer: 'none',
     scale: 5
   }
-  const response = await postMessage<'setOptions'>({ func: 'setOptions', data: [options] })
+  const response = await postMessage<FuncTypes['setOptions']>({ func: 'setOptions', data: [options] })
   console.log(response)
 }
 verovioWorker.value.addListener('ready', ready)
@@ -50,7 +53,7 @@ const loadData = (total: number) => {
   const promises = []
   loading.value = true
   for (const num of Array.from({ length: total }, (_, i) => i + 1)) {
-    promises.push(postMessage<'renderToSVG'>({
+    promises.push(postMessage<FuncTypes['renderToSVG']>({
       func: 'renderToSVG',
       data: [num, true]
     }).then((response) => {
@@ -88,11 +91,11 @@ const renderPage = (data: any) => {
 }
 const loadMusicXML = async (xml: string) => {
   loading.value = true
-  const status = await postMessage<'loadData'>({
+  const status = await postMessage<FuncTypes['loadData']>({
     func: 'loadData',
     data: [ xml ]
   })
-  const response = await postMessage<'getPageCount'>({
+  const response = await postMessage<FuncTypes['getPageCount']>({
     func: 'getPageCount',
     data: []
   })
@@ -131,7 +134,7 @@ const handleFileChange = (e: Event) => {
 const handlePageChange = async (current: number) => {
   page.value = current
   loading.value = true
-  const response = await postMessage<'renderToSVG'>({
+  const response = await postMessage<FuncTypes['renderToSVG']>({
     func: 'renderToSVG',
     data: [current, true]
   })
@@ -151,7 +154,7 @@ const handlePageChange = async (current: number) => {
 }
 
 const getOptions = async () => {
-  const response = await postMessage<'getOptions'>({
+  const response = await postMessage<FuncTypes['getOptions']>({
     func: 'getOptions',
     data: []
   })
@@ -159,8 +162,16 @@ const getOptions = async () => {
 }
 
 const getDefaultOptions = async () => {
-  const response = await postMessage<'getDefaultOptions'>({
+  const response = await postMessage<FuncTypes['getDefaultOptions']>({
     func: 'getDefaultOptions',
+    data: []
+  })
+  console.log(response)
+}
+
+const getMEI = async () => {
+  const response = await postMessage<FuncTypes['getMEI']>({
+    func: 'getMEI',
     data: []
   })
   console.log(response)
@@ -246,6 +257,7 @@ const VerovioComponent = defineComponent({
           <button class={ classes.value.btn } onClick={ update.bind(this, 3, 6) }>updateSegmentedID</button>
           <button class={ classes.value.btn } onClick={ getOptions }>getOptions</button>
           <button class={ classes.value.btn } onClick={ getDefaultOptions }>getDefaultOptions</button>
+          <button class={ classes.value.btn } onClick={ getMEI }>getMEI</button>
           <input ref={ fileInputRef } style={{ display: 'none' }} onChange={ handleFileChange } multiple={false} type={ 'file' } id={ 'fileInput' } />
           <label for={ 'fileInput' }>
             <button class={ classes.value.btn } onClick={ fileInputRef.value?.click.bind(document.getElementById('fileInput')) }>choose musicXML</button>
