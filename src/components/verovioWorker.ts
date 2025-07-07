@@ -82,13 +82,21 @@ const getProp = <T, K extends keyof T>(obj: T, key: K): T[K] => {
 const isType = <T extends ObjectType>(value: any, type: T): value is ObjectTypeMap[T] => {
   return Object.prototype.toString.call(value).slice(8, -1) === type
 }
+
+const destroy = () => {
+  console.log('destroy')
+  self.removeEventListener('message', handleMessage)
+  verovioToolkit.destroy()
+}
 const postMessage = ({ func, data, key }: { func: string; data: any; key: string }) => {
   self.postMessage({ func, data, key })
 }
-
-self.onmessage = async (event: { data: EventDataArgs }) => {
+const handleMessage = async (event: { data: EventDataArgs }) => {
   const { func, data, key } = event.data  as EventDataArgs
   // console.log(data, type)
+  if (func === 'destroy') {
+    destroy()
+  }
   if (isType(verovioToolkit[func], 'Function')) {
     // @ts-ignore
     const result: ReturnType<typeof verovioToolkit[typeof func]> = verovioToolkit[func](...data)
@@ -99,5 +107,7 @@ self.onmessage = async (event: { data: EventDataArgs }) => {
     postMessage({ func, data: result, key })
   }
 }
+
+self.addEventListener('message', handleMessage)
 
 self.postMessage({ func: 'ready', data: Object.keys(VerovioToolkit) })

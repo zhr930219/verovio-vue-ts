@@ -27,34 +27,40 @@ export class VerovioWorker {
   worker: Worker = new Worker(new URL('@/components/verovioWorker.ts', import.meta.url), { type: 'module' })
   msgList: MessageArgs<keyof toolkit>[] = []
   listeners = new Map<string, Function[]>()
-
+  abortController: AbortController
+  
   constructor() {
     console.log(this.worker)
-    this.init(this.worker)
+    this.abortController = new AbortController()
+    this.init()
   }
 
-  init(worker: Worker) {
-    worker.onmessage = (e) => {
-      // console.log(e)
-      const { data, func, key } = e.data
-      const callbacks = this.listeners.get(func)
-      if (callbacks) {
-        callbacks.forEach((callback) => {
-          callback(data, func, key)
-        })
-      }
-      const msgItemIdx = this.msgList.findIndex((item) => item.key === key)
-      if (msgItemIdx > -1) {
-        const deferred = this.msgList[msgItemIdx].deferred
-        if (deferred) {
-          deferred.resolve(data)
-        }
-        this.msgList.splice(msgItemIdx, 1)
-      }
+  init() {
+    const signal = this.abortController.signal
+    this.worker.addEventListener('message', this.handleMessage, { signal })
+    this.worker.addEventListener('error', this.handleError, { signal })
+  }
+  handleMessage = (e: MessageEvent) => {
+    // console.log(e)
+    const { data, func, key } = e.data
+    const callbacks = this.listeners.get(func)
+    if (callbacks) {
+      callbacks.forEach((callback) => {
+        callback(data, func, key)
+      })
     }
-    worker.onerror = (error) => {
-      console.error(error)
+    const msgItemIdx = this.msgList.findIndex((item) => item.key === key)
+    if (msgItemIdx > -1) {
+      const deferred = this.msgList[msgItemIdx].deferred
+      if (deferred) {
+        deferred.resolve(data)
+      }
+      this.msgList.splice(msgItemIdx, 1)
     }
+  }
+
+  handleError = (error: ErrorEvent) => {
+    console.error(error)
   }
 
   addListener(func: string, callback: (data: any, func: string, key: string) => void) {
@@ -84,6 +90,11 @@ export class VerovioWorker {
     return deferred.promise
   }
   destroy() {
+    console.log('destroy')
+    this.postMessage({ func: 'destroy', data: [] })
+    this.abortController.abort()
+    this.worker.removeEventListener('message', this.handleMessage)
+    this.worker.removeEventListener('error', this.handleError)
     this.worker.terminate()
     this.msgList = []
     this.listeners = new Map()
