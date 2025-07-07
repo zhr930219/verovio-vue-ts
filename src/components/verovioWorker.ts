@@ -96,6 +96,7 @@ const handleMessage = async (event: { data: EventDataArgs }) => {
   // console.log(data, type)
   if (func === 'destroy') {
     destroy()
+    return
   }
   if (isType(verovioToolkit[func], 'Function')) {
     // @ts-ignore
