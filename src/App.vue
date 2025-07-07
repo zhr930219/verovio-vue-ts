@@ -21,9 +21,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="box">
+  <!-- <div class="box">
     <button class="btn" @click="change()">change</button>
-  </div>
+  </div> -->
   <!-- <div class="box" v-if="active"><span class="text">{{ id }}</span></div> -->
   <div class="app-container">
     <VerovioViewer v-if="active" />
