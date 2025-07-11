@@ -16,3 +16,7 @@ html {
 .verovio-container {
   font-size: 16px;
 }
+
+.active {
+  color: #25d3d1;
+}

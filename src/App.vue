@@ -3,8 +3,8 @@ import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSegmentedID } from '@/stores/segmentedID'
 // import VerovioViewer from './components/VerovioViewer.vue'
-// import VerovioViewer from './components/VerovioComponent.tsx'
-import VerovioViewer from './components/VerovioComponent.vue'
+import VerovioViewer from './components/VerovioComponent.tsx'
+// import VerovioViewer from './components/VerovioComponent.vue'
 const active = ref(true)
 const store = useSegmentedID()
 const { update } = store

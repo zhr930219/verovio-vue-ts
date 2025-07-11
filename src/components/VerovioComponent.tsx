@@ -98,7 +98,7 @@ const VerovioComponent = defineComponent({
 
     const canvasRef = ref<HTMLCanvasElement | null>(null)
     const { draw, stop } = usePerformanceChecker({ canvasRef })
-
+    const currentNodeId = ref('')
     const ready = async (data: string[]) => {
       const options: VerovioOptions = {
         footer: 'none',
@@ -129,6 +129,29 @@ const VerovioComponent = defineComponent({
         loading.value = false
         if (svgRef.value) {
           nextTick(() => {
+            requestAnimationFrame(() => {
+              const svg = document.getElementById('verovio-container' + '-' + random.value)
+              if (svg) {
+                console.log('SVG is ready')
+                const allG = svg.querySelectorAll('g')
+                const nodes: SVGGElement[] = []
+                Array.from(allG).forEach((g) => {
+                  if (g.attributes['class'] && g.attributes['class'].value === 'note') {
+                    nodes.push(g)
+                    g.addEventListener('click', (e) => {
+                      console.log(g.id)
+                      currentNodeId.value = g.id
+                      nodes.forEach(item => {
+                        item.removeAttribute('fill')
+                        item.classList.remove('active')
+                      })
+                      g.setAttribute('fill', '#25d3d1')
+                      g.classList.add('active')
+                    })
+                  }
+                })
+              }
+            })
             spz.value = useSvgPanZoom('verovio-container' + '-' + random.value, {
               zoomEnabled: true,
               fit: true,
@@ -237,6 +260,42 @@ const VerovioComponent = defineComponent({
       console.log(response)
     }
 
+    const edit = async () => {
+      const response = await postMessage({
+        func: 'edit',
+        data: [{
+          action: 'set',
+          param: {
+            elementId: currentNodeId.value,
+            attribute: 'pname',
+            value: 'g'
+          }
+        }]
+      })
+      console.log(response)
+      const container = document.querySelector('.svg-pan-zoom_viewport')
+      console.log(container)
+      const newSvgStr = await postMessage({
+        func: 'renderToSVG',
+        data: [page.value, true]
+      })
+      console.log(newSvgStr)
+      // const parser = new DOMParser()
+      // const doc = parser.parseFromString(newSvgStr, 'image/svg+xml')
+      // const svg = container.querySelector('svg')
+      // console.log(svg)
+      // console.log(doc.documentElement)
+      // container.replaceChild(doc.documentElement, svg)
+    }
+
+    const getElementAttr = async () => {
+      const response = await postMessage({
+        func: 'getElementAttr',
+        data: ['bxw0xpq']
+      })
+      console.log(response)
+    }
+
     const postMessage: PostMessage = async<T extends keyof toolkit> (data: MessageArgs<T>): Promise<Awaited<ReturnType<toolkit[T]>>> => {
       return verovioWorker.value.postMessage(data)
     }
@@ -248,13 +307,34 @@ const VerovioComponent = defineComponent({
         spz.value.center()
       }
     }
+    const handleKeyUp = async (e: KeyboardEvent) => { 
+      console.log(e)
+      if (e.code !== 'ArrowUp' && e.code !== 'ArrowDown' && e.code!== 'ArrowLeft' && e.code !== 'ArrowRight') return
+      console.log(currentNodeId.value)
+      const attr = await postMessage({
+        func: 'getElementAttr',
+        data: [currentNodeId.value]
+      })
+      if (e.code === 'ArrowUp') {
+        console.log(attr)
+      }
+      if (e.code === 'ArrowDown') {
+        console.log(attr)
+      }
+    }
+    const handleSvgDom = () => {
+      const nodes = document.getElementById('verovio-container' + '-' + random.value).querySelectorAll('g.note')
+      console.log(nodes)
+    }
     onMounted(() => {
       draw()
       window.addEventListener('resize', handleResize)
+      window.addEventListener('keyup', handleKeyUp)
     })
     onBeforeUnmount(() => {
       verovioWorker.value.removeListener('ready', ready)
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('keyup', handleKeyUp)
       verovioWorker.value.destroy()
     })
     return () => {
@@ -268,6 +348,8 @@ const VerovioComponent = defineComponent({
           <button class={ classes.value.btn } onClick={ getOptions }>getOptions</button>
           <button class={ classes.value.btn } onClick={ getDefaultOptions }>getDefaultOptions</button>
           <button class={ classes.value.btn } onClick={ getMEI }>getMEI</button>
+          <button class={ classes.value.btn } onClick={ edit }>edit</button>
+          <button class={ classes.value.btn } onClick={ getElementAttr }>getElementAttr</button>
           <input ref={ fileInputRef } style={{ display: 'none' }} onChange={ handleFileChange } multiple={false} type={ 'file' } id={ 'fileInput' + '-' + random.value } />
           <label for={ 'fileInput' + '-' + random.value }>
             <button class={ classes.value.btn } onClick={ fileInputRef.value?.click.bind(document.getElementById('fileInput' + '-' + random.value)) }>choose musicXML</button>
