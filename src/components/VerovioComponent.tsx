@@ -31,21 +31,50 @@ const useStyle = createUseStyles({
     height: '100%',
     width: '100%'
   },
+  verovioContainerWrapper: {  
+    display: 'flex',
+    width: '100%',
+    height: '100%'
+  },
   verovioContainer: {
     width: '100%',
-    height: 'calc(80% - 20px)'
+    height: 'calc(100% - 25px)'
   },
   verovioListContainer: {
-    width: '100%',
-    height: 'calc(20% - 20px)',
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    display: 'flex',
-    flexWrap: 'wrap'
+    height: 'calc(100% - 25px)',
+    'overflow-y': 'auto',
+    'overflow-x': 'hidden',
+    '&::-webkit-scrollbar': {
+      width: '6px'
+    },
+    '&:hover::-webkit-scrollbar-thumb': {
+      backgroundColor: '#2c3e50'
+    },
+    '&:active::-webkit-scrollbar-thumb': {
+      backgroundColor: '#2c3e50'
+    },
+    '&::-webkit-scrollbar-track': {
+      'background-color': '#fff'
+
+    },
+    '&::-webkit-scrollbar-thumb': {
+      'background-color': '#fff',
+      'border-radius': '20px'
+    }
+  },
+  verovioListItem: {
+    padding: '12px'
   },
   verovioContainerSvg: {
     width: '100%',
     height: '100%'
+  },
+  svgContainer: {
+    'justify-content': 'center',
+    display: 'flex',
+    '&:first-child': {
+      margin: '12px'
+    }
   },
   performance: {
     position: 'absolute',
@@ -354,28 +383,31 @@ const VerovioComponent = defineComponent({
           <label for={ 'fileInput' + '-' + random.value }>
             <button class={ classes.value.btn } onClick={ fileInputRef.value?.click.bind(document.getElementById('fileInput' + '-' + random.value)) }>choose musicXML</button>
           </label>
-          {
-            loading.value ?
-            <div class={ classes.value.verovioContainer }>
-              <LoadingSpinner class={ classes.value.verovioContainerSvg }></LoadingSpinner>
-            </div> :
-            <div class={ classes.value.verovioContainer }>
-              <svg innerHTML={ svgRef.value } class={ classes.value.verovioContainerSvg } id={ 'verovio-container' + '-' + random.value }></svg>
+          <div class={ classes.value.verovioContainerWrapper }>
+            <div class={ classes.value.verovioListContainer } id={ 'verovio-list-container' + '-' + random.value }>
+              {
+                renderResultList.value.map((item, index) => {
+                  return (
+                    <div
+                      class={ classes.value.verovioListItem }
+                      onClick={ handlePageChange.bind(this, index + 1) }
+                      key={ index }
+                    >
+                      <div class={ classes.value.svgContainer } innerHTML={ item }></div>
+                      <div class={ classes.value.pageNum }>{ index + 1 }</div>
+                    </div>
+                  )
+                })
+              }
             </div>
-          }
-           <div class={ classes.value.verovioListContainer } id={ 'verovio-list-container' + '-' + random.value }>
             {
-              renderResultList.value.map((item, index) => {
-                return (
-                  <div
-                    onClick={ handlePageChange.bind(this, index + 1) }
-                    key={ index }
-                  >
-                    <div innerHTML={ item }></div>
-                    <div class={ classes.value.pageNum }>{ index + 1 }</div>
-                  </div>
-                )
-              })
+              loading.value ?
+              <div class={ classes.value.verovioContainer }>
+                <LoadingSpinner class={ classes.value.verovioContainerSvg }></LoadingSpinner>
+              </div> :
+              <div class={ classes.value.verovioContainer }>
+                <svg innerHTML={ svgRef.value } class={ classes.value.verovioContainerSvg } id={ 'verovio-container' + '-' + random.value }></svg>
+              </div>
             }
           </div>
         </div>

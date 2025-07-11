@@ -209,20 +209,23 @@ onBeforeUnmount(() => {
     <label :for="'fileInput' + '-' + random">
       <button class="btn" @click="fileInputRef?.click()">choose musicXML</button>
     </label>
-    <div class="verovio-container" v-if="!loading">
-      <svg v-html="svgRef" class="verovio-container-svg" :id="'verovio-container' + '-' + random"></svg>
-    </div>
-    <div class="verovio-container" v-else>
-      <LoadingSpinner class="verovio-container-svg"></LoadingSpinner>
-    </div>
-    <div class="verovio-list-container" :id="'verovio-list-container' + '-' + random">
-      <div
-        @click="handlePageChange(index + 1)"
-        v-for="(item, index) in renderResultList"
-        :key="index"
-       >
-        <div v-html="item"></div>
-        <div class="page-num">{{ index + 1 }}</div>
+    <div class="verovio-container-wrapper">
+      <div class="verovio-list-container" :id="'verovio-list-container' + '-' + random">
+        <div
+          class="verovio-list-item"
+          @click="handlePageChange(index + 1)"
+          v-for="(item, index) in renderResultList"
+          :key="index"
+        >
+          <div class="svg-container" v-html="item"></div>
+          <div class="page-num">{{ index + 1 }}</div>
+        </div>
+      </div>
+      <div class="verovio-container" v-if="!loading">
+        <svg v-html="svgRef" class="verovio-container-svg" :id="'verovio-container' + '-' + random"></svg>
+      </div>
+      <div class="verovio-container" v-else>
+        <LoadingSpinner class="verovio-container-svg"></LoadingSpinner>
       </div>
     </div>
   </div>
@@ -233,24 +236,43 @@ onBeforeUnmount(() => {
   height: 100%;
   width: 100%;
 }
+.verovio-container-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
 .verovio-container {
+  width: 100%;
   /* display: flex;
   justify-content: center;
   align-items: center; */
-  width: 100%;
-  height: calc(80% - 20px);
+  height: calc(100% - 25px);
 }
 .verovio-list-container {
-  width: 100%;
-  height: calc(20% - 20px);
+  height: calc(100% - 25px);
   overflow-y: auto;
   overflow-x: hidden;
-  display: flex;
-  flex-wrap: wrap;
+}
+.verovio-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+.verovio-list-container:hover::-webkit-scrollbar-thumb,
+.verovio-list-container:active::-webkit-scrollbar-thumb {
+  background: #2c3e50;
+}
+.verovio-list-container::-webkit-scrollbar-track {
+  background-color: #fff;
+}
+.verovio-list-container::-webkit-scrollbar-thumb {
+  background: #fff;
+  border-radius: 20px;
 }
 .verovio-container-svg {
   width: 100%;
   height: 100%;
+}
+.verovio-list-item {
+  padding: 12px;
 }
 
 .performance {
@@ -279,7 +301,16 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.page-num {
+.verovio-list-container .svg-container {
+  justify-content: center;
+  display: flex;
+}
+
+:deep(.verovio-list-item .svg-container svg) {
+  margin: 12px;
+}
+
+.verovio-list-item .page-num {
   display: flex;
   justify-content: center;
   color: #2c3e50;
